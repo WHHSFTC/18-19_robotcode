@@ -133,6 +133,7 @@ public class RobotProcessor {
                     bot.telemetry.addData("# Object Detected", updatedRecognitions.size());
                     if (updatedRecognitions.size() == 3) {
 
+
                     }
                     int goldMineralX = -1;
                     int goldMineralY = -1;
