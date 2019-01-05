@@ -2,7 +2,7 @@
 
 ## Packages in this Repo
 
-- **Robot** - Contains all of the basic classes for the robot.
+- **robot** - Contains all of the basic classes for the robot.
 - **RobotProcessor** - Contains the Processor classes for the robot.
 
 ## Files in this Repo
