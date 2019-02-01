@@ -14,7 +14,7 @@
 
 - Download and configure Android Studio
 - Download Code from [FTC App Code](https://github.com/ftctechnh/ftc_app)
-- Download code from this repo, and save to: ftc_app/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/
+- Git Clone the repo into to: ftc_app/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/
 - Plug in phone and hit "Run"
 
 ## Resources
