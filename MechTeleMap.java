@@ -1,31 +1,24 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
 
 /**
- * Created by khadija on 1/5/2019.
+ * Created by khadija on 2/16/2019.
  */
-public class TeleMap {
+public class MechTeleMap {
     HardwareMap hwMap = null;
     public DcMotor motorLF;
     public DcMotor motorLB;
     public DcMotor motorRF;
     public DcMotor motorRB;
+    public DcMotor leverMotorRight;
+    public DcMotor leverMotorLeft;
+    public DcMotor slideMotor;
     public DcMotor hangMotor;
-    public DcMotor intakeMotor;
-    public DcMotor bucketMotor;
 
-    public Servo bucketServo1;
-    public Servo bucketServo2;
-
-    public Servo marker;
-
-    //public AnalogInput limit1;
-    //public AnalogInput limit2;
+    public CRServo intakeServo;
 
     public void init(HardwareMap ahwMap) {
 
@@ -35,57 +28,40 @@ public class TeleMap {
         motorLF = hwMap.dcMotor.get("motorLF");
         motorRF = hwMap.dcMotor.get("motorRF");
         motorRB = hwMap.dcMotor.get("motorRB");
-
-        bucketMotor = hwMap.dcMotor.get("bucketMotor");
+        leverMotorLeft = hwMap.dcMotor.get("leverMotorLeft");
+        leverMotorRight = hwMap.dcMotor.get("leverMotorRight");
+        slideMotor = hwMap.dcMotor.get("slideMotor");
         hangMotor = hwMap.dcMotor.get("hangMotor");
-        intakeMotor = hwMap.dcMotor.get("intakeMotor");
 
-        bucketServo1 = hwMap.servo.get("bucketServo1");
-        bucketServo2 = hwMap.servo.get("bucketServo2");
-
-        marker = hwMap.servo.get("marker");
-
-        //limit1 = hwMap.analogInput.get("limit1");
-
-        //limit2 = hwMap.analogInput.get("limit2");
-
+        intakeServo = hwMap.crservo.get("intakeServo");
 
         motorLF.setDirection(DcMotor.Direction.FORWARD);
         motorRB.setDirection(DcMotor.Direction.FORWARD);
         motorRF.setDirection(DcMotor.Direction.FORWARD);
         motorLB.setDirection(DcMotor.Direction.FORWARD);
 
-        bucketMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        intakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        hangMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-
-
         motorLB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         motorLF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         motorRF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         motorRB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        bucketMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leverMotorLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leverMotorRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        slideMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         hangMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+
 
         motorLB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorLF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorRF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorRB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        intakeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        hangMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        bucketMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
         motorLB.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorLF.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorRF.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorRB.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hangMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        bucketMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
     }
 }

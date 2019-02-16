@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
  * Created by khadija on 1/5/2019.
  */
 public class Hang {
+
+
     public DcMotor hangMotor;
 
     public Hang(HardwareMap hwMap, Mode mode) {

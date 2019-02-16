@@ -7,13 +7,15 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
  * Created by khadija on 12/29/2018.
  */
 public class DriveTrain {
+
+
     public DcMotor motorLF;
     public DcMotor motorLB;
     public DcMotor motorRB;
     public DcMotor motorRF;
 
 
-    public DriveTrain(HardwareMap hwMap, Mode mode){
+    public DriveTrain(HardwareMap hwMap,Mode mode){
 
         motorLF = hwMap.dcMotor.get("motorLF");
         motorLB = hwMap.dcMotor.get("motorLB");

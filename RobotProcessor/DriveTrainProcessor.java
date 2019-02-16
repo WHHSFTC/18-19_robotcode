@@ -29,16 +29,17 @@ public class DriveTrainProcessor {
     }
 
 
-    static final double P_TURN_COEFF = .018;
-    static final double I_TURN_COEFF = 0;
-    static final double D_TURN_COEFF = 0;
-    static final double HEADING_THRESHOLD = 5;
-    static final double ANTI_WINDUP = 2;
+    static final double P_TURN_COEFF = .025;
+    static final double I_TURN_COEFF = 0.04;
+    static final double D_TURN_COEFF = .03;
+    static final double HEADING_THRESHOLD = 2;
+    static final double ANTI_WINDUP = 4;
 
-    public final static double TICKSPERROTATION = 537.6;
-    public static final double OMNI_WHEEL_CIRCUMFERENCE = 4 * Math.PI;
-    public final static int DIAMETER_OF_WHEEL = 4;
-    public static final double DRIVE_GEAR_REDUCTION = 1.286;
+    public final static double TICKSPERROTATION = 1120;
+    public final static double STRAFECORRECTION = 1.5;
+    public static final double OMNI_WHEEL_CIRCUMFERENCE = 3.93 * Math.PI;
+    public final static double DIAMETER_OF_WHEEL = 3.93;
+    public static final double DRIVE_GEAR_REDUCTION = 1.778;
 
     public void resetEnc() {
         driveTrain.motorRF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -131,6 +132,69 @@ public class DriveTrainProcessor {
         accelerate(0);
     }
 
+    public void turn(double target, double p, double i, double d) {
+        //Turn using PID
+        // clockwise = negative input, counter-clockwise = positive input
+
+        double heading = sensors.getHeading();
+        double angleWanted = target + heading;
+        double rcw = 1;
+        double integral = 0;
+        double previous_error = 0;
+        while (rcw != 0 && currentOpmode.opModeIsActive()) {
+
+
+
+            double error = angleWanted - sensors.getHeading();;
+
+            while (error > 180 && currentOpmode.opModeIsActive())
+                error -= 360;
+            while (error < -180 && currentOpmode.opModeIsActive())
+                error += 360;
+            double derivative = error - previous_error;
+            //small margin of error for increased speed
+            if (Math.abs(error) < HEADING_THRESHOLD) {
+                error = 0;
+            }
+            //prevents integral from growing too large
+            if (Math.abs(error) < ANTI_WINDUP && error != 0) {
+                integral += error;
+            } else {
+                integral = 0;
+            }
+            if (integral > (50 / i)) {
+                integral = 50 / i;
+            }
+            if (error == 0) {
+                derivative = 0;
+            }
+            rcw = p * error + i * integral + d * derivative;
+            previous_error = error;
+            accelerate(rcw);
+
+            telemetry.addData("first angle", sensors.getHeading());
+            //telemetry.addData("second angle", ref.secondAngle);
+            //telemetry.addData("third angle", ref.thirdAngle);
+            telemetry.addData("target", target);
+            telemetry.addData("speed ", rcw);
+            telemetry.addData("error", angleWanted - sensors.getHeading());
+            telemetry.addData("angleWanted", angleWanted);
+            telemetry.addData("motor power", driveTrain.motorLF.getPower());
+            telemetry.addData("rcw", rcw);
+            telemetry.addData("P", p * error);
+            telemetry.addData("I", i * integral);
+            telemetry.addData("D", d * derivative);
+            telemetry.addData("P_coe", p );
+            telemetry.addData("I_coe", i );
+            telemetry.addData("D_coe", d );
+            telemetry.update();
+
+            currentOpmode.sleep(20);
+
+
+        }
+        accelerate(0);
+    }
     public void accelerate(double speed) {
         double clip_speed = Range.clip(speed, -1, 1);
         driveTrain.motorLF.setPower(clip_speed);
@@ -142,12 +206,12 @@ public class DriveTrainProcessor {
     public void goAngle(double dist, double angle, double power) {
         resetEnc();
         enterPosenc();
-        angle = angle-180;
+        angle = angle+90;
         double angel = Math.toRadians(angle);
         double x = Math.cos(angel);
         double y = Math.sin(angel);
-        double distance = dist / (OMNI_WHEEL_CIRCUMFERENCE);
-        double ticks = TICKSPERROTATION * distance;
+        double distanceRatio = dist / (OMNI_WHEEL_CIRCUMFERENCE);
+        double ticks = (TICKSPERROTATION*distanceRatio)/DRIVE_GEAR_REDUCTION;
         int ticksRF = (int) Math.round(ticks * (y - x));
         int ticksLF = (int) Math.round(ticks * (-y - x));
         int ticksLB = (int) Math.round(ticks * (-y + x));
@@ -165,12 +229,12 @@ public class DriveTrainProcessor {
                 driveTrain.motorRF.isBusy() &&
                 driveTrain.motorLF.isBusy()) &&
                 opMode.opModeIsActive()) {
-            telemetry.addData("Path2", "Running at %7d :%7d",
+            telemetry.addData("Path2", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
                     driveTrain.motorLB.getCurrentPosition(),
                     driveTrain.motorLF.getCurrentPosition(),
                     driveTrain.motorRB.getCurrentPosition(),
                     driveTrain.motorRF.getCurrentPosition());
-            telemetry.addData("target", "Running at %7d :%7d",
+            telemetry.addData("target", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
                     driveTrain.motorLB.getTargetPosition(),
                     driveTrain.motorLF.getTargetPosition(),
                     driveTrain.motorRB.getTargetPosition(),
@@ -179,13 +243,73 @@ public class DriveTrainProcessor {
             telemetry.update();
         }
         stopBotMotors();
+        telemetry.addData("path reached", sensors.imu.getAngularOrientation());
+        telemetry.update();
+        currentOpmode.sleep(50);
         enterEnc();
     }
+    public void goAngleStall(double dist, double angle, double power) {
+        resetEnc();
+        enterPosenc();
+        angle = angle+90;
+        double angel = Math.toRadians(angle);
+        double x = Math.cos(angel);
+        double y = Math.sin(angel);
+        double stall = -1;
+        int count = 0;
+        double distanceRatio = dist / (OMNI_WHEEL_CIRCUMFERENCE);
+        double ticks = (TICKSPERROTATION*distanceRatio)/DRIVE_GEAR_REDUCTION;
+        int ticksRF = (int) Math.round(ticks * (y - x));
+        int ticksLF = (int) Math.round(ticks * (-y - x));
+        int ticksLB = (int) Math.round(ticks * (-y + x));
+        int ticksRB = (int) Math.round(ticks * (y + x));
+        driveTrain.motorLF.setTargetPosition(ticksLF);
+        driveTrain.motorRF.setTargetPosition(ticksRF);
+        driveTrain.motorRB.setTargetPosition(ticksRB);
+        driveTrain.motorLB.setTargetPosition(ticksLB);
+        driveTrain.motorRF.setPower(power * (y - x));
+        driveTrain.motorLF.setPower(-power * (-y - x));
+        driveTrain.motorLB.setPower(-power * (-y + x));
+        driveTrain.motorRB.setPower(power * (y + x));
+        while (( driveTrain.motorLB.isBusy() &&
+                driveTrain.motorRB.isBusy() &&
+                driveTrain.motorRF.isBusy() &&
+                driveTrain.motorLF.isBusy()) &&
+                opMode.opModeIsActive()) {
+            stall = driveTrain.motorRF.getCurrentPosition();
+            telemetry.addData("Path2", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
+                    driveTrain.motorLB.getCurrentPosition(),
+                    driveTrain.motorLF.getCurrentPosition(),
+                    driveTrain.motorRB.getCurrentPosition(),
+                    driveTrain.motorRF.getCurrentPosition());
+            telemetry.addData("target", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
+                    driveTrain.motorLB.getTargetPosition(),
+                    driveTrain.motorLF.getTargetPosition(),
+                    driveTrain.motorRB.getTargetPosition(),
+                    driveTrain.motorRF.getTargetPosition());
+            telemetry.addData("gyroHeading", sensors.imu.getAngularOrientation());
+            telemetry.update();
+            if(stall == driveTrain.motorRF.getCurrentPosition()){
+                count++;
+            }
+            if(count>10){
+                break;
+            }
+
+            stall = driveTrain.motorRF.getCurrentPosition();
+        }
+        stopBotMotors();
+        telemetry.addData("path reached", sensors.imu.getAngularOrientation());
+        telemetry.update();
+        currentOpmode.sleep(20);
+        enterEnc();
+    }
+
     public void align(double offset) {
         //turns to a specific angle
 
         double error =  sensors.getHeading();
-        double diff = offset - error;
+        double diff = offset - error + 90;
         turn(diff);
     }
     public void driveForward(double power){
@@ -211,5 +335,95 @@ public class DriveTrainProcessor {
         driveTrain.motorLF.setPower(power);
         driveTrain.motorLB.setPower(power);
         driveTrain.motorRB.setPower(-power);
+    }
+    public void strafeLeftInches(double power, double inches){
+        resetEnc();
+        enterPosenc();
+
+        double angel = Math.toRadians(180);
+        double x = Math.cos(angel);
+        double y = Math.sin(angel);
+        double distanceRatio = inches / (OMNI_WHEEL_CIRCUMFERENCE);
+        double ticks = ((TICKSPERROTATION*distanceRatio)/DRIVE_GEAR_REDUCTION)*STRAFECORRECTION;
+        int ticksRF = (int) Math.round(ticks * (y - x));
+        int ticksLF = (int) Math.round(ticks * (-y - x));
+        int ticksLB = (int) Math.round(ticks * (-y + x));
+        int ticksRB = (int) Math.round(ticks * (y + x));
+        driveTrain.motorLF.setTargetPosition(ticksLF);
+        driveTrain.motorRF.setTargetPosition(ticksRF);
+        driveTrain.motorRB.setTargetPosition(ticksRB);
+        driveTrain.motorLB.setTargetPosition(ticksLB);
+        driveTrain.motorRF.setPower(power * (y - x));
+        driveTrain.motorLF.setPower(-power * (-y - x));
+        driveTrain.motorLB.setPower(-power * (-y + x));
+        driveTrain.motorRB.setPower(power * (y + x));
+        while (( driveTrain.motorLB.isBusy() &&
+                driveTrain.motorRB.isBusy() &&
+                driveTrain.motorRF.isBusy() &&
+                driveTrain.motorLF.isBusy()) &&
+                opMode.opModeIsActive()) {
+            telemetry.addData("Path2", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
+                    driveTrain.motorLB.getCurrentPosition(),
+                    driveTrain.motorLF.getCurrentPosition(),
+                    driveTrain.motorRB.getCurrentPosition(),
+                    driveTrain.motorRF.getCurrentPosition());
+            telemetry.addData("target", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
+                    driveTrain.motorLB.getTargetPosition(),
+                    driveTrain.motorLF.getTargetPosition(),
+                    driveTrain.motorRB.getTargetPosition(),
+                    driveTrain.motorRF.getTargetPosition());
+            telemetry.addData("gyroHeading", sensors.imu.getAngularOrientation());
+            telemetry.update();
+        }
+        stopBotMotors();
+        telemetry.addData("path reached", sensors.imu.getAngularOrientation());
+        telemetry.update();
+        currentOpmode.sleep(20);
+        enterEnc();
+    }
+    public void strafeRightInches(double power, double inches){
+        resetEnc();
+        enterPosenc();
+
+        double angel = Math.toRadians(0);
+        double x = Math.cos(angel);
+        double y = Math.sin(angel);
+        double distanceRatio = inches / (OMNI_WHEEL_CIRCUMFERENCE);
+        double ticks = ((TICKSPERROTATION*distanceRatio)/DRIVE_GEAR_REDUCTION)*STRAFECORRECTION;
+        int ticksRF = (int) Math.round(ticks * (y - x));
+        int ticksLF = (int) Math.round(ticks * (-y - x));
+        int ticksLB = (int) Math.round(ticks * (-y + x));
+        int ticksRB = (int) Math.round(ticks * (y + x));
+        driveTrain.motorLF.setTargetPosition(ticksLF);
+        driveTrain.motorRF.setTargetPosition(ticksRF);
+        driveTrain.motorRB.setTargetPosition(ticksRB);
+        driveTrain.motorLB.setTargetPosition(ticksLB);
+        driveTrain.motorRF.setPower(power * (y - x));
+        driveTrain.motorLF.setPower(-power * (-y - x));
+        driveTrain.motorLB.setPower(-power * (-y + x));
+        driveTrain.motorRB.setPower(power * (y + x));
+        while (( driveTrain.motorLB.isBusy() &&
+                driveTrain.motorRB.isBusy() &&
+                driveTrain.motorRF.isBusy() &&
+                driveTrain.motorLF.isBusy()) &&
+                opMode.opModeIsActive()) {
+            telemetry.addData("Path2", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
+                    driveTrain.motorLB.getCurrentPosition(),
+                    driveTrain.motorLF.getCurrentPosition(),
+                    driveTrain.motorRB.getCurrentPosition(),
+                    driveTrain.motorRF.getCurrentPosition());
+            telemetry.addData("target", "Running at motorLB %7d motorLF :%7d motorRB %7d motorRF %7d",
+                    driveTrain.motorLB.getTargetPosition(),
+                    driveTrain.motorLF.getTargetPosition(),
+                    driveTrain.motorRB.getTargetPosition(),
+                    driveTrain.motorRF.getTargetPosition());
+            telemetry.addData("gyroHeading", sensors.imu.getAngularOrientation());
+            telemetry.update();
+        }
+        stopBotMotors();
+        telemetry.addData("path reached", sensors.imu.getAngularOrientation());
+        telemetry.update();
+        currentOpmode.sleep(20);
+        enterEnc();
     }
 }

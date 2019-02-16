@@ -28,7 +28,7 @@ public class Sensors {
     public static final String LABEL_SILVER_MINERAL = "Silver Mineral";
 
 
-    public Sensors(HardwareMap hwMap, Mode mode){
+    public Sensors(HardwareMap hwMap,Mode mode){
         if(mode == Mode.Auto){
             imu = hwMap.get(BNO055IMU.class, "imu");
             intializeImu();
@@ -45,8 +45,8 @@ public class Sensors {
 
         }
         else {
-            limit1 = hwMap.get(DistanceSensor.class,"limit1");
-            limit2 = hwMap.get(DistanceSensor.class,"limit2");
+            //limit1 = hwMap.get(DistanceSensor.class,"limit1");
+            //limit2 = hwMap.get(DistanceSensor.class,"limit2");
         }
 
 
